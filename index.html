@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Slide Maker (PPTX)</title>
-    <!-- Google Fonts: BIZ UDPGothic -->
+    <title>スライドメーカーPPTX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <!-- PptxGenJS (CDN) -->
-    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/jszip.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
 
     <style>
@@ -21,6 +20,7 @@
             --border-color: #cbd5e1;
             --slide-width: 960px; /* 16:9 ratio base */
             --slide-height: 540px;
+            --danger-color: #f97316; /* Orange for delete */
         }
 
         body {
@@ -55,6 +55,7 @@
             font-family: inherit;
             font-weight: bold;
             font-size: 0.9rem;
+            transition: background-color 0.2s;
         }
         .btn:hover { opacity: 0.9; }
         .btn-outline {
@@ -62,7 +63,9 @@
             border: 1px solid var(--primary-color);
             color: var(--primary-color);
         }
-        .btn-danger { background-color: #ef4444; }
+        /* Changed to Orange */
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: #ea580c; }
 
         .main-container {
             display: flex;
@@ -84,13 +87,16 @@
             border-bottom: 1px solid var(--border-color);
             cursor: pointer;
             transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         .slide-thumbnail.active {
             background-color: #eff6ff;
             border-left: 4px solid var(--primary-color);
         }
-        .slide-thumbnail h3 { margin: 0 0 0.5rem 0; font-size: 0.9rem; }
-        .slide-thumbnail p { margin: 0; font-size: 0.75rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .thumb-num { font-weight: bold; color: #94a3b8; width: 1.5em; }
+        .slide-thumbnail p { margin: 0; font-size: 0.85rem; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;}
 
         .sidebar-controls {
             padding: 1rem;
@@ -113,31 +119,32 @@
             width: 300px;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.5rem; /* Increased gap */
         }
         
         label { font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem; display: block; }
-        input[type="text"], textarea {
+        textarea {
             width: 100%;
             padding: 0.5rem;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-family: inherit;
             resize: vertical;
+            min-height: 200px; /* Taller text area */
         }
-        textarea { min-height: 150px; }
 
         .file-upload-box {
             border: 2px dashed var(--border-color);
-            padding: 1rem;
+            padding: 1.5rem 1rem;
             text-align: center;
             border-radius: 4px;
             background: #f8fafc;
             color: #64748b;
             font-size: 0.85rem;
             cursor: pointer;
+            transition: border-color 0.2s;
         }
-        .file-upload-box:hover { border-color: var(--primary-color); }
+        .file-upload-box:hover { border-color: var(--primary-color); background: #f1f5f9; }
         input[type="file"] { display: none; }
 
         /* Preview Slide */
@@ -157,39 +164,34 @@
             overflow: hidden;
             display: flex;
             transform-origin: top center;
-            /* Scale down for smaller screens handled by JS or simple CSS transform if needed */
         }
         
-        /* Slide Layout: 16:9 Simple Business Style */
+        /* Slide Layout: 16:9 Simple Business Style (No Title) */
         .slide-content {
             padding: 40px;
             width: 100%;
             height: 100%;
-            display: grid;
-            grid-template-rows: auto 1fr;
-            gap: 20px;
+            display: flex; /* Changed to flex for centering content */
+            flex-direction: column;
+            justify-content: center; /* Vertically center */
             box-sizing: border-box;
-        }
-
-        .slide-title {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
         }
 
         .slide-body {
             display: grid;
             grid-template-columns: 1.2fr 0.8fr; /* Text : Image */
-            gap: 20px;
-            align-items: start;
+            gap: 30px;
+            align-items: center; /* Vertically center items */
+            height: 100%;
         }
         
         .slide-text {
-            font-size: 1.5rem;
-            line-height: 1.6;
+            font-size: 1.8rem; /* Slightly larger font */
+            line-height: 1.5;
             white-space: pre-wrap;
+            /* Ensure text doesn't overflow awkwardly */
+            max-height: 100%;
+            overflow-y: hidden;
         }
 
         .slide-image-area {
@@ -197,17 +199,17 @@
             height: 100%;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
         }
         
         .slide-image-area img {
             max-width: 100%;
-            max-height: 380px;
+            max-height: 440px; /* Increased max height */
             object-fit: contain;
-            border: 1px solid #eee;
+            /* border: 1px solid #eee; Removed border */
         }
 
-        /* JSON Import/Export Modal (Simple overlay) */
+        /* JSON Import/Export Modal */
         #jsonModal {
             display: none;
             position: fixed;
@@ -223,12 +225,13 @@
             border-radius: 8px;
             width: 80%;
             max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
 
         @media (max-width: 1400px) {
             .slide-preview {
-                transform: scale(0.7);
-                margin-bottom: -160px; /* Adjust layout shift */
+                transform: scale(0.65);
+                margin-bottom: -180px;
             }
         }
     </style>
@@ -236,7 +239,7 @@
 <body>
 
 <header>
-    <h1>Simple Slide Maker <small>(PPTX出力)</small></h1>
+    <h1>スライドメーカーPPTX</h1>
     <div style="display:flex; gap:10px;">
         <button class="btn btn-outline" onclick="toggleJsonModal()">JSON入出力</button>
         <button class="btn" onclick="exportPPTX()">PPTXをダウンロード</button>
@@ -244,65 +247,52 @@
 </header>
 
 <div class="main-container">
-    <!-- Sidebar: Slide List -->
     <div class="sidebar">
         <div class="sidebar-controls">
             <button class="btn" onclick="addNewSlide()">＋ 新規スライド</button>
             <button class="btn btn-danger" onclick="deleteCurrentSlide()">削除</button>
         </div>
-        <div id="slideListContainer">
-            <!-- Thumbnails injected here -->
-        </div>
+        <div id="slideListContainer" style="flex:1;">
+            </div>
     </div>
 
-    <!-- Main Editor -->
     <div class="editor-area">
-        <!-- Input Forms -->
         <div class="input-group">
             <div>
-                <label>タイトル</label>
-                <input type="text" id="inputTitle" oninput="updateCurrentSlideData()">
-            </div>
-            <div>
                 <label>本文 (改行可)</label>
-                <textarea id="inputText" oninput="updateCurrentSlideData()"></textarea>
+                <textarea id="inputText" oninput="updateCurrentSlideData()" placeholder="ここにスライドの内容を入力してください..."></textarea>
             </div>
             <div>
                 <label>画像</label>
-                <!-- File Input -->
-                <label class="file-upload-box" for="imageInput">
+                <label class="file-upload-box" for="imageInput" id="fileDropArea">
                     ファイルを選択<br>または<br>ここに画像をペースト (Ctrl+V)
                 </label>
                 <input type="file" id="imageInput" accept="image/*" onchange="handleFileSelect(event)">
-                <button class="btn btn-outline" style="width:100%; margin-top:5px;" onclick="clearImage()">画像を削除</button>
+                <button class="btn btn-outline" style="width:100%; margin-top:5px; font-size:0.85rem;" onclick="clearImage()">画像を削除</button>
             </div>
         </div>
 
-        <!-- Preview -->
         <div class="preview-container">
             <div class="slide-preview" id="slidePreview">
                 <div class="slide-content">
-                    <div class="slide-title" id="previewTitle">タイトル</div>
                     <div class="slide-body">
                         <div class="slide-text" id="previewText">本文</div>
                         <div class="slide-image-area" id="previewImageArea">
-                            <!-- img tag injected here -->
-                        </div>
+                            </div>
                     </div>
                 </div>
             </div>
-            <p style="font-size:0.8rem; color:#64748b;">※フォントは「BIZ UDPGothic」を使用しています</p>
+            <p style="font-size:0.8rem; color:#64748b;">※フォントは「BIZ UDPGothic」を使用しています (16:9)</p>
         </div>
     </div>
 </div>
 
-<!-- JSON Modal -->
 <div id="jsonModal">
     <div class="modal-content">
-        <h3>JSONデータの入出力</h3>
-        <p>テキストエリアにJSONを貼り付けて「読み込み」を押すか、現在のデータをコピーしてください。</p>
-        <textarea id="jsonArea" style="width:100%; height:200px; font-family:monospace;"></textarea>
-        <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
+        <h3>スライドJSON</h3>
+        <p style="font-size:0.9rem; color:#64748b;">テキストエリアにJSONを貼り付けて「読み込み」を押すか、現在のデータをコピーしてください。</p>
+        <textarea id="jsonArea" style="width:100%; height:200px; font-family:monospace; border:1px solid var(--border-color); padding:0.5rem;"></textarea>
+        <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
             <button class="btn btn-outline" onclick="toggleJsonModal()">閉じる</button>
             <button class="btn" onclick="loadJsonData()">読み込み</button>
             <button class="btn" onclick="copyJsonData()">コピー</button>
@@ -312,10 +302,10 @@
 
 <script>
     // --- State Management ---
+    // Title field removed from data structure
     let slides = [
         {
-            title: "プレゼンテーションのタイトル",
-            content: "ここに本文を入力してください。\n\n・箇条書き1\n・箇条書き2",
+            content: "ここに本文を入力してください。\n\n・箇条書き1\n・箇条書き2\n・箇条書き3",
             image: null // Base64 string
         }
     ];
@@ -334,8 +324,7 @@
 
     function addNewSlide() {
         slides.push({
-            title: "新しいスライド",
-            content: "内容を入力",
+            content: "新しいスライドの内容",
             image: null
         });
         currentIndex = slides.length - 1;
@@ -345,10 +334,10 @@
 
     function deleteCurrentSlide() {
         if (slides.length <= 1) {
-            alert("これ以上削除できません");
+            alert("これ以上削除できません。少なくとも1枚のスライドが必要です。");
             return;
         }
-        if (confirm("このスライドを削除しますか？")) {
+        if (confirm("現在のスライドを削除しますか？")) {
             slides.splice(currentIndex, 1);
             if (currentIndex >= slides.length) {
                 currentIndex = slides.length - 1;
@@ -373,9 +362,13 @@
             const div = document.createElement('div');
             div.className = `slide-thumbnail ${index === currentIndex ? 'active' : ''}`;
             div.onclick = () => selectSlide(index);
+            // Display slide number and first line of content
+            let previewText = slide.content.split('\n')[0] || '(空白)';
+            if (previewText.length > 15) previewText = previewText.substring(0, 15) + '...';
+
             div.innerHTML = `
-                <h3>${slide.title || '(無題)'}</h3>
-                <p>${slide.content || '...'}</p>
+                <span class="thumb-num">${index + 1}</span>
+                <p>${previewText}</p>
             `;
             container.appendChild(div);
         });
@@ -383,24 +376,21 @@
 
     function loadSlideToEditor() {
         const slide = slides[currentIndex];
-        document.getElementById('inputTitle').value = slide.title;
+        // document.getElementById('inputTitle').value = slide.title; // Removed
         document.getElementById('inputText').value = slide.content;
         updatePreview();
     }
 
     function updateCurrentSlideData() {
-        slides[currentIndex].title = document.getElementById('inputTitle').value;
+        // slides[currentIndex].title = document.getElementById('inputTitle').value; // Removed
         slides[currentIndex].content = document.getElementById('inputText').value;
         updatePreview();
-        
-        // Update thumbnail title in real-time (optional, can be optimized)
-        const thumbnails = document.querySelectorAll('.slide-thumbnail h3');
-        if(thumbnails[currentIndex]) thumbnails[currentIndex].innerText = slides[currentIndex].title;
+        renderSlideList(); // Refresh thumbnail list to show updated content
     }
 
     function updatePreview() {
         const slide = slides[currentIndex];
-        document.getElementById('previewTitle').innerText = slide.title;
+        // document.getElementById('previewTitle').innerText = slide.title; // Removed
         document.getElementById('previewText').innerText = slide.content;
         
         const imgContainer = document.getElementById('previewImageArea');
@@ -409,6 +399,11 @@
             const img = document.createElement('img');
             img.src = slide.image;
             imgContainer.appendChild(img);
+            
+            // Change layout class if image exists (optional, using CSS grid instead)
+            // document.querySelector('.slide-body').classList.add('has-image');
+        } else {
+            // document.querySelector('.slide-body').classList.remove('has-image');
         }
     }
 
@@ -435,10 +430,19 @@
     }
 
     function processImageFile(file) {
+        // Basic validation
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit check
+             alert("画像サイズが大きすぎます (5MB以下推奨)");
+             // return; // Uncomment to enforce limit
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             slides[currentIndex].image = e.target.result; // Base64
             updatePreview();
+        };
+        reader.onerror = () => {
+            alert("画像の読み込みに失敗しました。");
         };
         reader.readAsDataURL(file);
     }
@@ -448,65 +452,70 @@
         updatePreview();
     }
 
-    // --- PPTX Export ---
+    // --- PPTX Export (Fixed & Updated Layout) ---
 
-    function exportPPTX() {
-        let pptx = new PptxGenJS();
-        
-        // Font Settings
-        const fontFace = "BIZ UDPGothic"; 
+    async function exportPPTX() {
+        const btn = document.querySelector('header .btn:last-child');
+        const originalText = btn.innerText;
+        btn.innerText = '作成中...';
+        btn.disabled = true;
 
-        // Layout (16:9)
-        pptx.layout = 'LAYOUT_16x9';
-
-        slides.forEach((slide) => {
-            let slidePage = pptx.addSlide();
-
-            // Background / Color
-            slidePage.background = { color: "F1F5F9" };
+        try {
+            // Initialize PptxGenJS
+            let pptx = new PptxGenJS();
             
-            // Title
-            slidePage.addText(slide.title, {
-                x: 0.5, y: 0.3, w: '90%', h: 0.8,
-                fontSize: 32,
-                fontFace: fontFace,
-                color: '2563eb',
-                bold: true,
-                border: { pt: 0, pb: 0, color: "cbd5e1", type: "solid" }, // Border bottom hack requires line shape in JS usually, simplifying here
-                underline: false
+            // Font Settings
+            const fontFace = "BIZ UDPGothic"; 
+
+            // Layout (16:9)
+            pptx.layout = 'LAYOUT_16x9';
+
+            slides.forEach((slide) => {
+                let slidePage = pptx.addSlide();
+
+                // Background / Color
+                slidePage.background = { color: "FFFFFF" };
+                
+                // Content Layout (No Title)
+                if (slide.image) {
+                    // Two column layout: Text Left, Image Right
+                    // Vertically centered approx.
+                    slidePage.addText(slide.content, {
+                        x: 0.5, y: 0.5, w: 5.0, h: 6.5, // Left half
+                        fontSize: 24, // Larger font
+                        fontFace: fontFace,
+                        color: '334155',
+                        valign: 'middle',
+                        align: 'left'
+                    });
+                    slidePage.addImage({
+                        data: slide.image,
+                        x: 5.8, y: 0.5, w: 4.0, h: 6.5, // Right half
+                        sizing: { type: "contain", w: 4.0, h: 6.5 }
+                    });
+                } else {
+                    // Full width text, centered
+                    slidePage.addText(slide.content, {
+                        x: 1.0, y: 0.5, w: 8.0, h: 6.5,
+                        fontSize: 28,
+                        fontFace: fontFace,
+                        color: '334155',
+                        valign: 'middle',
+                        align: 'center'
+                    });
+                }
             });
-            // Line under title
-            slidePage.addShape(pptx.ShapeType.line, { x:0.5, y:1.2, w:'90%', h:0, line:{color:'cbd5e1', width:2} });
 
-            // Content
-            // Determine layout based on image presence
-            if (slide.image) {
-                // Two column layout
-                slidePage.addText(slide.content, {
-                    x: 0.5, y: 1.5, w: 5.5, h: 5.0,
-                    fontSize: 18,
-                    fontFace: fontFace,
-                    color: '334155',
-                    valign: 'top'
-                });
-                slidePage.addImage({
-                    data: slide.image,
-                    x: 6.2, y: 1.5, w: 3.5, h: 4.5,
-                    sizing: { type: "contain", w: 3.5, h: 4.5 }
-                });
-            } else {
-                // Full width text
-                slidePage.addText(slide.content, {
-                    x: 0.5, y: 1.5, w: '90%', h: 5.0,
-                    fontSize: 18,
-                    fontFace: fontFace,
-                    color: '334155',
-                    valign: 'top'
-                });
-            }
-        });
+            // Save File
+            await pptx.writeFile({ fileName: `Slide_${new Date().toISOString().slice(0,10)}.pptx` });
 
-        pptx.writeFile({ fileName: `Presentation_${new Date().getTime()}.pptx` });
+        } catch (error) {
+            console.error("PPTX Export Error:", error);
+            alert("PPTXの作成に失敗しました。\nエラー: " + error.message);
+        } finally {
+             btn.innerText = originalText;
+             btn.disabled = false;
+        }
     }
 
     // --- JSON Import/Export ---
@@ -519,7 +528,6 @@
             modal.style.display = 'none';
         } else {
             // Show modal and fill current data
-            // Exclude huge image data for cleaner view? No, need it for backup.
             jsonArea.value = JSON.stringify(slides, null, 2);
             modal.style.display = 'flex';
         }
@@ -528,26 +536,46 @@
     function loadJsonData() {
         const jsonArea = document.getElementById('jsonArea');
         try {
-            const data = JSON.parse(jsonArea.value);
-            if (Array.isArray(data)) {
-                slides = data;
-                currentIndex = 0;
-                renderSlideList();
-                loadSlideToEditor();
-                toggleJsonModal();
-            } else {
-                alert("データの形式が正しくありません (配列形式が必要です)");
+            // Basic JSON validation
+            const jsonString = jsonArea.value.trim();
+            if (!jsonString) { throw new Error("データが空です"); }
+
+            const data = JSON.parse(jsonString);
+            
+            // Validate data structure
+            if (!Array.isArray(data)) {
+                throw new Error("データの形式が正しくありません (配列形式が必要です)");
             }
+            if (data.length === 0 || !data[0].hasOwnProperty('content')) {
+                 throw new Error("有効なスライドデータが含まれていません");
+            }
+
+            slides = data;
+            // Ensure image field exists if missing in older JSON
+            slides.forEach(s => { if(!s.hasOwnProperty('image')) s.image = null; });
+
+            currentIndex = 0;
+            renderSlideList();
+            loadSlideToEditor();
+            toggleJsonModal();
+            alert("データを読み込みました。");
+
         } catch (e) {
-            alert("JSONの読み込みに失敗しました: " + e.message);
+            alert("JSONの読み込みに失敗しました:\n" + e.message);
         }
     }
 
-    function copyJsonData() {
+    async function copyJsonData() {
         const jsonArea = document.getElementById('jsonArea');
-        jsonArea.select();
-        document.execCommand('copy');
-        alert("クリップボードにコピーしました");
+        try {
+            await navigator.clipboard.writeText(jsonArea.value);
+            alert("クリップボードにコピーしました");
+        } catch (err) {
+            // Fallback for older browsers or insecure contexts
+            jsonArea.select();
+            document.execCommand('copy');
+            alert("クリップボードにコピーしました (Fallback)");
+        }
     }
 
 </script>
